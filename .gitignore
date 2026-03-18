@@ -10,3 +10,6 @@ artifacts/
 cache/
 typechain-types/
 .env
+demo/node_modules/
+demo/.next/
+demo/out/
