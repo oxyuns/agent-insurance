@@ -21,11 +21,34 @@ That's powerful. But real-world losses go far beyond the budget.
 >
 > One is escrow. The other is insurance. This distinction is why a 3rd-party insurance layer exists.
 
+## Why Provider Pays the Premium (Not Client)
+
+Traditional insurance has the client pay. This protocol flips it — and that's intentional.
+
+| | Client Pays | Provider Pays (Performance Bond) |
+|---|---|---|
+| Moral hazard | Client + Evaluator can collude to fake reject | Provider has skin-in-the-game |
+| Trust signal | None | Paying premium = public signal of confidence |
+| Market effect | Price competition only | Quality competition incentivized |
+
+> **Paying a premium is how a provider says "I'm confident in my work" on-chain.**
+> A provider who selects Premium tier (80% coverage) is putting more money on the line — and clients can see that.
+
 ## What This System Does
 
 agent-insurance is a **parametric performance bond insurance protocol** built as a pure ERC-8183 Hook. It adds an insurance layer on top of ERC-8183 job markets — covering losses beyond the budget refund that ACP core provides.
 
 **One-line summary:** Bad work gets rejected. Client gets paid more. Automatically.
+
+## What Makes This Novel
+
+Three design decisions that matter:
+
+1. **Pure Hook — zero core contract modification.** agent-insurance runs entirely as an `IACPHook`. No fork of ERC-8183, no custom ACP deployment. Any existing ERC-8183 market can adopt it by whitelisting the hook address.
+
+2. **Parametric trigger — no proof of loss required.** The `reject()` call itself is the insurance trigger. No claims process, no documentation, no off-chain arbitration for standard cases. Coverage is automatic.
+
+3. **72-hour challenge window — fraud protection without blocking payouts.** Providers can dispute fraudulent rejects. But honest claims pay out after 72 hours with no gatekeeping.
 
 ## Agent Identity
 
@@ -152,3 +175,33 @@ Scenarios covered:
 | `agent.json` | ERC-8004 agent manifest |
 | `agent_log.json` | Build decisions + milestones |
 | `demo/` | Next.js dashboard with live on-chain data |
+
+## Judge Checklist
+
+If you're evaluating this submission, here's what you can verify on-chain right now:
+
+**Live demo (no wallet needed)**
+→ https://agent-insurance-3mg5.vercel.app/
+
+**Read-only contract checks (Base Sepolia)**
+```bash
+# Pool solvency ratio
+cast call 0xe8D09BE87beD6Baa71CFfD7c2Eb13d9894A9B42c "solvencyRatio()(uint256)" --rpc-url https://sepolia.base.org
+
+# Premium quote: 1000 USDC budget, Standard tier, 30 days
+cast call 0x1E0BA7dB5D0266E019BD72E703a2aAD225Ba4eaa "getPremium(uint256,address,uint256,uint8)(uint256)" 1000000000 0x0000000000000000000000000000000000000000 30 2 --rpc-url https://sepolia.base.org
+
+# Coverage amount for same params
+cast call 0x1E0BA7dB5D0266E019BD72E703a2aAD225Ba4eaa "getCoverage(uint256,uint8)(uint256)" 1000000000 2 --rpc-url https://sepolia.base.org
+```
+
+**Test suite**
+```bash
+git clone https://github.com/oxyuns/agent-insurance && cd agent-insurance
+npm install && npm test
+# → 26/26 passing
+```
+
+**ERC-8004 Agent registration (Base Mainnet)**
+- agentId: `33398`
+- Registry: `eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`
