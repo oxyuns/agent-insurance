@@ -4,58 +4,39 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deploying with:", deployer.address);
 
-  // 1. Payment token (Base Sepolia USDC)
-  // Real USDC on Base Sepolia: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
-  const USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
-  console.log("Using USDC:", USDC_ADDRESS);
+  const gasPrice = ethers.parseUnits("1", "gwei");
+  const overrides = { gasPrice };
 
-  // 2. MockReputationOracle (테스트용 — 실제 배포시 온체인 oracle로 교체)
-  const Oracle = await ethers.getContractFactory("MockReputationOracle");
-  const oracle = await Oracle.deploy();
-  await oracle.waitForDeployment();
-  console.log("MockReputationOracle:", await oracle.getAddress());
+  const POOL_ADDRESS    = "0xe8D09BE87beD6Baa71CFfD7c2Eb13d9894A9B42c";
+  const STAKING_ADDRESS = "0x72275D6627Ce688aD789D6DB960e0be6ae99E670";
+  const HOOK_ADDRESS    = "0x85a24bdb644bbeaDcCfB70596400b550fE1b388A";
 
-  // 3. PremiumCalculator
-  const Calc = await ethers.getContractFactory("PremiumCalculator");
-  const calculator = await Calc.deploy(await oracle.getAddress());
-  await calculator.waitForDeployment();
-  console.log("PremiumCalculator:", await calculator.getAddress());
+  console.log("Hook:    ", HOOK_ADDRESS);
+  console.log("Pool:    ", POOL_ADDRESS);
+  console.log("Staking: ", STAKING_ADDRESS);
 
-  // 4. BondPool (reserveRatio = 2000 = 20%)
-  const Pool = await ethers.getContractFactory("BondPool");
-  const pool = await Pool.deploy(USDC_ADDRESS, deployer.address, 2000);
-  await pool.waitForDeployment();
-  console.log("BondPool:", await pool.getAddress());
+  // setHook
+  const pool = await ethers.getContractAt("BondPool", POOL_ADDRESS);
+  const tx1 = await pool.setHook(HOOK_ADDRESS, overrides);
+  await tx1.wait();
+  console.log("BondPool.setHook ✓");
 
-  // 5. PerformanceBondHook
-  // ACP_ADDRESS: ERC-8183 AgenticCommerce on Base Sepolia (필요시 업데이트)
-  const ACP_ADDRESS = process.env.ACP_ADDRESS || ethers.ZeroAddress;
-  const Hook = await ethers.getContractFactory("PerformanceBondHook");
-  const hook = await Hook.deploy(
-    ACP_ADDRESS,
-    await pool.getAddress(),
-    await calculator.getAddress(),
-    USDC_ADDRESS
-  );
-  await hook.waitForDeployment();
-  console.log("PerformanceBondHook:", await hook.getAddress());
+  // transferOwnership
+  const staking = await ethers.getContractAt("EvaluatorStaking", STAKING_ADDRESS);
+  const tx2 = await staking.transferOwnership(HOOK_ADDRESS, overrides);
+  await tx2.wait();
+  console.log("EvaluatorStaking.transferOwnership → hook ✓");
 
-  // 6. BondPool에 hook 등록
-  await pool.setHook(await hook.getAddress());
-  console.log("BondPool hook set ✓");
-
-  console.log("\n=== Deployment Summary ===");
-  console.log({
-    oracle: await oracle.getAddress(),
-    calculator: await calculator.getAddress(),
-    pool: await pool.getAddress(),
-    hook: await hook.getAddress(),
-  });
-
-  console.log("\nNext steps:");
-  console.log("1. ACP Admin: AgenticCommerce.setHookWhitelist(hook, true)");
-  console.log("2. Deposit initial capital: pool.depositCapital(amount)");
-  console.log("3. Update ACP_ADDRESS if deploying with real ACP");
+  console.log("\n=== All Done ===");
+  console.log(JSON.stringify({
+    network: "Base Sepolia (chainId 84532)",
+    usdc:       "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    oracle:     "0x8D2662FFd71dfc994F4364004A226CE350A59874",
+    calculator: "0x1E0BA7dB5D0266E019BD72E703a2aAD225Ba4eaa",
+    pool:       POOL_ADDRESS,
+    staking:    STAKING_ADDRESS,
+    hook:       HOOK_ADDRESS,
+  }, null, 2));
 }
 
 main().catch(console.error);

@@ -1,7 +1,7 @@
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "Tigu",
-  "description": "Tigu is an AI agent that built agent-insurance — a Performance Bond Insurance protocol for ERC-8183 job markets. Tigu autonomously designs, codes, tests, and ships Solidity smart contracts. Operated by Jay Jo (@Oxyuns) via OpenClaw on Base.",
+  "description": "Tigu is an AI agent that built agent-insurance \u2014 a Performance Bond Insurance protocol for ERC-8183 job markets. Tigu autonomously designs, codes, tests, and ships Solidity smart contracts. Operated by Jay Jo (@Oxyuns) via OpenClaw on Base.",
   "version": "1.0.0",
   "active": true,
   "registrations": [
@@ -26,12 +26,26 @@
       "description": "ERC-8183 Hook that issues parametric performance bonds for AI agent job markets. Providers pay a premium; Clients receive automatic coverage on job rejection.",
       "type": "smart-contract",
       "chain": "eip155:84532",
-      "interfaces": ["IACPHook"],
+      "interfaces": [
+        "IACPHook"
+      ],
       "pricing": {
         "model": "actuarial-premium",
         "minBPS": 50,
-        "tiers": ["Basic-30%", "Standard-60%", "Premium-80%"]
-      }
+        "tiers": [
+          "Basic-30%",
+          "Standard-60%",
+          "Premium-80%"
+        ]
+      },
+      "contracts": {
+        "oracle": "0x8D2662FFd71dfc994F4364004A226CE350A59874",
+        "calculator": "0x1E0BA7dB5D0266E019BD72E703a2aAD225Ba4eaa",
+        "pool": "0xe8D09BE87beD6Baa71CFfD7c2Eb13d9894A9B42c",
+        "staking": "0x72275D6627Ce688aD789D6DB960e0be6ae99E670",
+        "hook": "0x85a24bdb644bbeaDcCfB70596400b550fE1b388A"
+      },
+      "explorer": "https://sepolia.basescan.org/address/0x85a24bdb644bbeaDcCfB70596400b550fE1b388A"
     }
   ],
   "capabilities": [
@@ -47,7 +61,7 @@
     "hackathon": "Synthesis 2026",
     "tracks": [
       "ERC-8183 Open Build",
-      "Agents With Receipts — ERC-8004",
+      "Agents With Receipts \u2014 ERC-8004",
       "Agent Services on Base",
       "Synthesis Open Track"
     ]

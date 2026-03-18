@@ -206,6 +206,16 @@ flowchart TD
     A --> B --> C --> D --> E --> F --> G --> H
 ```
 
+**Deployed on Base Sepolia:**
+
+| Contract | Address |
+|----------|---------|
+| MockReputationOracle | `0x8D2662FFd71dfc994F4364004A226CE350A59874` |
+| PremiumCalculator | `0x1E0BA7dB5D0266E019BD72E703a2aAD225Ba4eaa` |
+| BondPool | `0xe8D09BE87beD6Baa71CFfD7c2Eb13d9894A9B42c` |
+| EvaluatorStaking | `0x72275D6627Ce688aD789D6DB960e0be6ae99E670` |
+| **PerformanceBondHook** | [`0x85a24bdb644bbeaDcCfB70596400b550fE1b388A`](https://sepolia.basescan.org/address/0x85a24bdb644bbeaDcCfB70596400b550fE1b388A) |
+
 ```bash
 export ACP_ADDRESS=<ERC-8183 AgenticCommerce address>
 export PRIVATE_KEY=<deployer wallet>

@@ -1,4 +1,5 @@
 require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -13,6 +14,7 @@ module.exports = {
     baseSepolia: {
       url: "https://sepolia.base.org",
       chainId: 84532,
+      accounts: process.env.PRIVATE_KEY ? [`0x${process.env.PRIVATE_KEY.replace(/^0x/, '')}`] : [],
     },
   },
 };

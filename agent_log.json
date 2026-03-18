@@ -10,15 +10,18 @@
     {
       "ts": "2026-03-18T05:30:00Z",
       "type": "architecture",
-      "description": "Chose pure Hook architecture — zero modifications to ERC-8183 core. Ensures composability and upgradability.",
-      "alternatives_rejected": ["Fork AgenticCommerce.sol", "Separate escrow contract"],
+      "description": "Chose pure Hook architecture \u2014 zero modifications to ERC-8183 core. Ensures composability and upgradability.",
+      "alternatives_rejected": [
+        "Fork AgenticCommerce.sol",
+        "Separate escrow contract"
+      ],
       "rationale": "ERC-8183 Hook pattern is the right abstraction. Core contract stays clean."
     },
     {
       "ts": "2026-03-18T05:35:00Z",
       "type": "security",
       "description": "Replaced CooldownActive revert in _handleAfterReject with silent return. Design Principle 3: hook must never rollback ACP reject().",
-      "bug": "Critical — would have caused ACP reject() to revert when cooldown active, leaving job stuck in Submitted state."
+      "bug": "Critical \u2014 would have caused ACP reject() to revert when cooldown active, leaving job stuck in Submitted state."
     },
     {
       "ts": "2026-03-18T05:38:00Z",
@@ -36,23 +39,78 @@
       "ts": "2026-03-18T05:45:00Z",
       "type": "feature",
       "description": "Implemented Level 2 security: EvaluatorStaking + MultiSigEvaluator. Design doc classified these as 'mature stage' but decided to implement fully.",
-      "components": ["EvaluatorStaking.sol", "MultiSigEvaluator.sol"],
+      "components": [
+        "EvaluatorStaking.sol",
+        "MultiSigEvaluator.sol"
+      ],
       "rationale": "Complete implementation makes the protocol production-ready, not just MVP."
     }
   ],
   "tool_calls": [
-    {"tool": "Write", "count": 15, "description": "Contract source files, test files, config"},
-    {"tool": "Edit", "count": 12, "description": "Bug fixes and design alignment"},
-    {"tool": "exec", "count": 28, "description": "npm install, compile, test, git operations"},
-    {"tool": "web_fetch", "count": 6, "description": "ERC-8004 spec, Synthesis API, track details"}
+    {
+      "tool": "Write",
+      "count": 15,
+      "description": "Contract source files, test files, config"
+    },
+    {
+      "tool": "Edit",
+      "count": 12,
+      "description": "Bug fixes and design alignment"
+    },
+    {
+      "tool": "exec",
+      "count": 28,
+      "description": "npm install, compile, test, git operations"
+    },
+    {
+      "tool": "web_fetch",
+      "count": 6,
+      "description": "ERC-8004 spec, Synthesis API, track details"
+    }
   ],
   "milestones": [
-    {"ts": "2026-03-18T05:33:18Z", "event": "first_commit", "description": "Project scaffold"},
-    {"ts": "2026-03-18T05:43:33Z", "event": "full_implementation", "description": "All 6 contracts compiled, 17/17 tests passing"},
-    {"ts": "2026-03-18T05:45:20Z", "event": "synthesis_draft_submitted", "description": "Draft submitted to 4 tracks"},
-    {"ts": "2026-03-18T05:50:00Z", "event": "design_review", "description": "3 bugs found and fixed against DESIGN.md"},
-    {"ts": "2026-03-18T05:55:00Z", "event": "level2_complete", "description": "EvaluatorStaking + MultiSigEvaluator added, 26/26 tests passing"},
-    {"ts": "2026-03-18T06:00:00Z", "event": "readme_published", "description": "English README with Mermaid diagrams, CEO/CTO voice"}
+    {
+      "ts": "2026-03-18T05:33:18Z",
+      "event": "first_commit",
+      "description": "Project scaffold"
+    },
+    {
+      "ts": "2026-03-18T05:43:33Z",
+      "event": "full_implementation",
+      "description": "All 6 contracts compiled, 17/17 tests passing"
+    },
+    {
+      "ts": "2026-03-18T05:45:20Z",
+      "event": "synthesis_draft_submitted",
+      "description": "Draft submitted to 4 tracks"
+    },
+    {
+      "ts": "2026-03-18T05:50:00Z",
+      "event": "design_review",
+      "description": "3 bugs found and fixed against DESIGN.md"
+    },
+    {
+      "ts": "2026-03-18T05:55:00Z",
+      "event": "level2_complete",
+      "description": "EvaluatorStaking + MultiSigEvaluator added, 26/26 tests passing"
+    },
+    {
+      "ts": "2026-03-18T06:00:00Z",
+      "event": "readme_published",
+      "description": "English README with Mermaid diagrams, CEO/CTO voice"
+    },
+    {
+      "ts": "2026-03-18T06:34:02Z",
+      "event": "base_sepolia_deployed",
+      "description": "All 5 contracts deployed to Base Sepolia. Synthesis project published.",
+      "contracts": {
+        "oracle": "0x8D2662FFd71dfc994F4364004A226CE350A59874",
+        "calculator": "0x1E0BA7dB5D0266E019BD72E703a2aAD225Ba4eaa",
+        "pool": "0xe8D09BE87beD6Baa71CFfD7c2Eb13d9894A9B42c",
+        "staking": "0x72275D6627Ce688aD789D6DB960e0be6ae99E670",
+        "hook": "0x85a24bdb644bbeaDcCfB70596400b550fE1b388A"
+      }
+    }
   ],
   "test_results": {
     "total": 26,
@@ -65,8 +123,8 @@
       "Challenge flow (provider dispute)",
       "Pool insolvency re-queue",
       "Access control (NotACP revert)",
-      "EvaluatorStaking — stake, slash, anomaly detection, reinstate",
-      "MultiSigEvaluator — threshold, duplicate confirm, unauthorized"
+      "EvaluatorStaking \u2014 stake, slash, anomaly detection, reinstate",
+      "MultiSigEvaluator \u2014 threshold, duplicate confirm, unauthorized"
     ]
   },
   "onchain_artifacts": [
@@ -76,6 +134,12 @@
       "txHash": "0xf5167b1f2f5341f46c1f585bff65670a7853ab119ee101b5777babdd34edf855",
       "agentId": 33398,
       "registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
+    },
+    {
+      "type": "contract-deployment",
+      "chain": "eip155:84532",
+      "hook": "0x85a24bdb644bbeaDcCfB70596400b550fE1b388A",
+      "explorer": "https://sepolia.basescan.org/address/0x85a24bdb644bbeaDcCfB70596400b550fE1b388A"
     }
   ],
   "retries": [],
@@ -84,7 +148,7 @@
       "ts": "2026-03-18T05:36:00Z",
       "type": "compile-error",
       "description": "supportsInterface missing override specifier for both ERC165 and IERC165",
-      "resolution": "Added override(ERC165, IERC165) — fixed in 1 edit"
+      "resolution": "Added override(ERC165, IERC165) \u2014 fixed in 1 edit"
     },
     {
       "ts": "2026-03-18T05:42:00Z",
