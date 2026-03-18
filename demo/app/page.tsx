@@ -156,6 +156,81 @@ export default function Home() {
         </button>
       </section>
 
+      {/* ── ESCROW VS INSURANCE ─────────────────────────────────────────── */}
+      <section className="px-6 py-16 max-w-5xl mx-auto">
+        <h2 className="text-2xl font-bold text-white mb-2">Escrow ≠ Insurance</h2>
+        <p className="text-gray-500 mb-8">ERC-8183 guarantees your budget back. agent-insurance covers what comes after.</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6">
+            <div className="text-xs text-gray-500 uppercase tracking-wider mb-3">ERC-8183 Core (Escrow)</div>
+            <p className="text-gray-300 text-sm mb-4">
+              Guarantees exactly one thing: if the job is rejected or expires,
+              <span className="text-white font-semibold"> you get the budget back.</span>
+            </p>
+            <div className="font-mono text-xs text-green-400 bg-gray-800 rounded-lg p-3 space-y-1">
+              <div>reject() → budget refunded ✅</div>
+              <div>claimRefund() → budget refunded ✅</div>
+              <div className="text-gray-600 pt-1">// That's all. Nothing more.</div>
+            </div>
+          </div>
+
+          <div className="bg-blue-950/30 border border-blue-800 rounded-2xl p-6">
+            <div className="text-xs text-blue-400 uppercase tracking-wider mb-3">agent-insurance (Insurance Layer)</div>
+            <p className="text-gray-300 text-sm mb-4">
+              Adds coverage <span className="text-white font-semibold">beyond the budget</span> for real-world losses
+              triggered automatically by the on-chain reject event.
+            </p>
+            <div className="font-mono text-xs text-blue-300 bg-gray-800 rounded-lg p-3 space-y-1">
+              <div>reject() → budget refunded ✅</div>
+              <div>             + coverageAmt ✅ ← NEW</div>
+              <div className="text-gray-600 pt-1">// No proof needed. Parametric.</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <span className="text-sm text-gray-400">What gets covered</span>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-gray-500 uppercase">
+                <th className="text-left px-5 py-3">Loss Type</th>
+                <th className="text-left px-5 py-3">Example</th>
+                <th className="text-center px-4 py-3">ERC-8183</th>
+                <th className="text-center px-4 py-3">+ agent-insurance</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800">
+              {[
+                ["Budget refund",           "20 USDC returned",                   true,  true],
+                ["Deadline delay costs",    "Campaign launch delayed 2 weeks",     false, true],
+                ["Bad output consequences", "Buggy code causes production outage", false, true],
+                ["Provider replacement",    "Re-onboarding a new provider",        false, true],
+                ["Contract penalties",      "B2B SLA breach fee",                  false, true],
+              ].map(([type, example, core, ins]) => (
+                <tr key={String(type)} className="hover:bg-gray-800/50">
+                  <td className="px-5 py-3 text-gray-300 font-medium">{String(type)}</td>
+                  <td className="px-5 py-3 text-gray-500 text-xs">{String(example)}</td>
+                  <td className="text-center px-4 py-3">{core ? "✅" : <span className="text-gray-600">—</span>}</td>
+                  <td className="text-center px-4 py-3">{ins ? "✅" : <span className="text-gray-600">—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-4 p-4 bg-yellow-950/20 border border-yellow-900/50 rounded-xl">
+          <span className="text-yellow-400 font-semibold">💡 Why not build insurance into ERC-8183 core?</span>
+          <p className="text-gray-400 text-sm mt-1">
+            Premium pricing depends on context — provider reputation, job type, duration, coverage level.
+            This complexity belongs in a Hook, not the core. The Hook system is exactly the right abstraction.
+            agent-insurance is the reference implementation.
+          </p>
+        </div>
+      </section>
+
       {/* ── THE PROTOCOL ─────────────────────────────────────────────────── */}
       <section className="px-6 py-16 max-w-5xl mx-auto">
         <h2 className="text-2xl font-bold text-white mb-2">The Protocol</h2>

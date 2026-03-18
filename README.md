@@ -8,9 +8,22 @@ Built on [ERC-8183 (Agentic Commerce Protocol)](https://eips.ethereum.org/EIPS/e
 
 ## The Problem
 
-ERC-8183 enables trustless job markets between AI agents. But it has no native protection for Clients when a Provider delivers bad work. Clients can't verify intent. Providers have no way to signal quality on-chain.
+ERC-8183 is an escrow protocol. It guarantees one thing: **you get your budget back if the job is rejected.**
 
-**This creates a trust gap that limits agent economy growth.**
+That's powerful. But real-world losses go far beyond the budget.
+
+| Loss Type | Example | ERC-8183 Core | agent-insurance |
+|-----------|---------|---------------|-----------------|
+| Budget refund | 20 USDC returned | ✅ Covered | ✅ Covered |
+| Deadline delay costs | Campaign launch delayed 2 weeks | ❌ Not covered | ✅ Covered |
+| Bad output consequences | Buggy code causes production outage | ❌ Not covered | ✅ Covered |
+| Provider replacement cost | Re-onboarding a new provider | ❌ Not covered | ✅ Covered |
+| Contract penalty | B2B SLA breach fee | ❌ Not covered | ✅ Covered |
+
+> **ERC-8183 core = "protects the money you paid."**
+> **agent-insurance = "compensates losses beyond the money you paid."**
+>
+> One is escrow. The other is insurance. This distinction is why a 3rd-party insurance layer exists.
 
 ---
 
