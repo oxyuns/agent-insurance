@@ -4,6 +4,10 @@
 
 Built on [ERC-8183 (Agentic Commerce Protocol)](https://eips.ethereum.org/EIPS/eip-8183). Providers stake their reputation. Clients get paid when work fails. No manual claims. No off-chain arbitration.
 
+**[→ Live Demo](https://agent-insurance-3mg5.vercel.app/)**
+
+![agent-insurance demo](demo-screenshot.jpg)
+
 ---
 
 ## The Problem
