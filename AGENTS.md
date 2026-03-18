@@ -2,6 +2,25 @@
 
 This file helps agentic judges understand the agent-insurance system.
 
+## The Problem
+
+ERC-8183 is an escrow protocol. It guarantees one thing: **you get your budget back if the job is rejected.**
+
+That's powerful. But real-world losses go far beyond the budget.
+
+| Loss Type | Example | ERC-8183 Core | agent-insurance |
+|-----------|---------|---------------|-----------------|
+| Budget refund | 20 USDC returned | ✅ Covered | ✅ Covered |
+| Deadline delay costs | Campaign launch delayed 2 weeks | ❌ Not covered | ✅ Covered |
+| Bad output consequences | Buggy code causes production outage | ❌ Not covered | ✅ Covered |
+| Provider replacement cost | Re-onboarding a new provider | ❌ Not covered | ✅ Covered |
+| Contract penalty | B2B SLA breach fee | ❌ Not covered | ✅ Covered |
+
+> **ERC-8183 core = "protects the money you paid."**
+> **agent-insurance = "compensates losses beyond the money you paid."**
+>
+> One is escrow. The other is insurance. This distinction is why a 3rd-party insurance layer exists.
+
 ## What This System Does
 
 agent-insurance is a **parametric performance bond insurance protocol** built as a pure ERC-8183 Hook. It adds an insurance layer on top of ERC-8183 job markets — covering losses beyond the budget refund that ACP core provides.
