@@ -1,25 +1,31 @@
 # agent-insurance
 
-> **ERC-8183 기반 AI 에이전트 이행보증 보험 프로토콜**  
-> Provider가 프리미엄을 납부하고, 거절 시 Client에게 자동으로 보험금이 지급됩니다.
+**Performance Bond Insurance for AI Agent Job Markets**
+
+Built on [ERC-8183 (Agentic Commerce Protocol)](https://eips.ethereum.org/EIPS/eip-8183). Providers stake their reputation. Clients get paid when work fails. No manual claims. No off-chain arbitration.
 
 ---
 
-## 왜 필요한가
+## The Problem
 
-ERC-8183(Agentic Commerce Protocol)은 AI 에이전트 간 온체인 잡 마켓을 가능하게 합니다. 그러나 Provider가 불량 작업물을 제출하거나 실패해도 Client에게 돌아오는 보호 장치가 없습니다.
+ERC-8183 enables trustless job markets between AI agents. But it has no native protection for Clients when a Provider delivers bad work. Clients can't verify intent. Providers have no way to signal quality on-chain.
 
-**agent-insurance**는 이 신뢰 갭을 해결합니다.
-
-- Provider는 잡을 수락할 때 **이행보증 본드(Performance Bond)** 를 발행합니다
-- 작업이 거절되면 **72시간 챌린지 기간 후 자동으로 보험금이 지급**됩니다
-- 담합 방지를 위한 Evaluator 스테이킹 및 이상 패턴 감지가 내장되어 있습니다
-
-모든 기능은 **ERC-8183 코어 컨트랙트를 수정하지 않고** 순수 Hook으로 구현되었습니다.
+**This creates a trust gap that limits agent economy growth.**
 
 ---
 
-## 아키텍처
+## The Solution
+
+agent-insurance introduces **parametric performance bonds**:
+
+- Provider pays a premium when setting job budget
+- If the job is rejected, Client receives up to 80% of budget as coverage
+- 72-hour challenge window lets Provider dispute fraudulent rejects
+- Everything runs as a pure ERC-8183 Hook — zero core contract modifications
+
+---
+
+## Architecture
 
 ```mermaid
 graph TD
@@ -46,21 +52,21 @@ graph TD
     style MultiSig fill:#1a3a2a,color:#fff,stroke:#00e676
 ```
 
-### 컨트랙트 구성
+### Contracts
 
-| 컨트랙트 | 역할 |
-|----------|------|
-| `PerformanceBondHook` | ACP Hook 구현체. 프리미엄 징수, 보험금 큐잉, 챌린지 처리 |
-| `BondPool` | 프리미엄 적립 및 보험금 지급 풀. 최소 준비금 비율 강제 |
-| `PremiumCalculator` | Provider 평판 + Tier + 기간 기반 보험료 산정 |
-| `EvaluatorStaking` | Evaluator 스테이킹 및 이상 패턴 감지 (Level 2) |
-| `MultiSigEvaluator` | 다중 서명 Evaluator — 3명 중 2명 합의 (Level 2) |
+| Contract | Responsibility |
+|----------|----------------|
+| `PerformanceBondHook` | ACP Hook entry point. Collects premiums, queues payouts, handles challenges. |
+| `BondPool` | Holds capital. Enforces minimum reserve ratio. Pays out coverage. |
+| `PremiumCalculator` | Prices premiums using provider reputation, tier, and job duration. |
+| `EvaluatorStaking` | Evaluators stake USDC. Anomaly detection auto-suspends bad actors. |
+| `MultiSigEvaluator` | Requires 2-of-3 signer consensus before executing `reject()`. |
 
 ---
 
-## 자금 흐름
+## How It Works
 
-### 정상 완료 (complete)
+### Normal Completion
 
 ```mermaid
 sequenceDiagram
@@ -73,20 +79,17 @@ sequenceDiagram
     P->>Hook: approve(premium)
     P->>ACP: setBudget(jobId, amount, tier)
     ACP->>Hook: beforeAction(setBudget)
-    Hook->>Pool: transferFrom(provider, premium)
-    Hook->>Pool: recordPremium(premium)
-    Note over Hook,Pool: Bond 발행 ✅
+    Hook->>Pool: collect premium from Provider
+    Note over Hook,Pool: Bond issued ✅
 
     C->>ACP: fund(jobId)
     P->>ACP: submit(jobId, deliverable)
-    ACP->>Hook: beforeAction(complete)
-    ACP->>P: transfer(net)
     ACP->>Hook: afterAction(complete)
-    Hook->>Pool: (프리미엄 풀 수익 유지)
-    Note over Hook: BondReleased 이벤트 ✅
+    ACP->>P: pay net amount
+    Note over Pool: Premium stays as pool yield ✅
 ```
 
-### 거절 → 보험금 지급 (reject)
+### Rejection → Insurance Payout
 
 ```mermaid
 sequenceDiagram
@@ -95,119 +98,106 @@ sequenceDiagram
     participant Hook as PerformanceBondHook
     participant Pool as BondPool
     participant C as Client
-    participant Anyone as Anyone
+    participant Anyone
 
     E->>ACP: reject(jobId, reason)
-    ACP->>C: refund(budget) ← ACP 자체 처리
+    ACP->>C: refund full budget
     ACP->>Hook: afterAction(reject)
-    Hook->>Hook: ClaimQueued (72h 대기)
-    Note over Hook: 챌린지 기간 시작
+    Hook->>Hook: queue claim (72h challenge window)
 
-    alt Provider가 이의신청 없음
-        Anyone->>Hook: executePayout(jobId) [72h 후]
+    alt No challenge from Provider
+        Anyone->>Hook: executePayout(jobId)
         Hook->>Pool: payout(client, coverageAmt)
-        Pool->>C: transfer(coverageAmt)
-        Note over C: budget + coverageAmt 수령 ✅
-    else Provider 이의신청
-        Note over Hook: Provider.challengeClaim() 호출 시<br/>지급 무기한 보류
+        Pool->>C: transfer coverage
+        Note over C: Receives budget + coverage ✅
+    else Provider disputes
+        Note over Hook: claimableAt = max uint256<br/>Payout blocked until arbitration
     end
 ```
 
 ---
 
-## 보험료 산정
+## Premium Pricing
 
 ```
-failRate    = (10000 - providerCompletionRate) / 10000
-covRatio    = tierCoverageRatio[tier]   // Basic=30%, Standard=60%, Premium=100%
-durFactor   = 1 + ln(durationDays) / 20
-premiumBPS  = max(failRate × covRatio × 0.9 × durFactor, 0.5%)
-premium     = budget × premiumBPS
+failRate   = (10000 - providerCompletionRate) / 10000
+covRatio   = tierCoverageRatio[tier]
+durFactor  = 1 + ln(durationDays) / 20
+premiumBPS = max(failRate × covRatio × 0.9 × durFactor, 0.5%)
+premium    = budget × premiumBPS
 
-coverage    = min(budget × covRatio, budget × 80%)  // 80% 상한
+coverage   = min(budget × covRatio, budget × 80%)
 ```
 
-### Tier별 비교
+### Tier Comparison
 
-| Tier | 커버리지 | 프리미엄 (70% 완료율 Provider, 30일) |
-|------|---------|--------------------------------------|
+| Tier | Coverage | Premium (70% provider, 30 days) |
+|------|----------|---------------------------------|
 | Basic | 30% | ~0.5% |
 | Standard | 60% | ~1.0% |
-| Premium | 80%\* | ~1.7% |
+| Premium | 80%* | ~1.7% |
 
-\* `MAX_COVERAGE_BPS = 8000` 상한 적용
+*80% hard cap enforced in Hook (`MAX_COVERAGE_BPS = 8000`)
 
 ---
 
-## 도덕적 해이 방지 (Level 1 + 2)
+## Security Model
 
 ```mermaid
 graph LR
-    subgraph Level1 ["Level 1 (MVP)"]
-        L1A["커버리지 80% 상한<br/>Client도 20% 손실"]
-        L1B["72h 챌린지 기간<br/>Provider 이의신청 가능"]
-        L1C["30일 쿨다운<br/>동일 Client-Evaluator 쌍"]
+    subgraph L1 ["Level 1 — MVP"]
+        A["80% coverage cap<br/>Client absorbs 20% loss"]
+        B["72h challenge period<br/>Provider can dispute"]
+        C["30-day cooldown<br/>Per client-evaluator pair"]
     end
 
-    subgraph Level2 ["Level 2 (성숙)"]
-        L2A["EvaluatorStaking<br/>1000 USDC 필수"]
-        L2B["이상 패턴 감지<br/>reject율 >30% → 자동 정지"]
-        L2C["슬래시 10%<br/>부정 판정 확인 시"]
-        L2D["MultiSig Evaluator<br/>3명 중 2명 합의"]
+    subgraph L2 ["Level 2 — Production"]
+        D["Evaluator staking<br/>1000 USDC minimum"]
+        E["Anomaly detection<br/>>30% reject rate → auto-suspend"]
+        F["10% slash<br/>On confirmed fraud"]
+        G["MultiSig Evaluator<br/>2-of-3 consensus to reject"]
     end
 
-    Level1 --> Level2
+    L1 --> L2
 ```
+
+### Threat Model
+
+| Attack | Defense |
+|--------|---------|
+| Client + Evaluator collude to fake reject | 72h challenge + provider dispute |
+| Provider intentionally fails to claim insurance | Coverage goes to Client only |
+| Evaluator bribed for bad verdict | Staking slash + anomaly detection |
+| Repeated fake rejects to drain pool | 30-day cooldown + reject rate cap |
 
 ---
 
-## 빠른 시작
+## Quickstart
 
-### 요구사항
-
-- Node.js 22+ (LTS)
-- Hardhat 2.x
+**Requirements:** Node.js 22+ · Hardhat 2.x
 
 ```bash
 git clone https://github.com/oxyuns/agent-insurance
 cd agent-insurance
 npm install
-```
-
-### 컴파일
-
-```bash
 npm run compile
-```
-
-### 테스트
-
-```bash
 npm test
 ```
 
 ```
-✔ 26/26 tests passing
+26 passing
 ```
 
-### 배포 (Base Sepolia)
+---
 
-```bash
-# .env 설정
-export ACP_ADDRESS=<ERC-8183 AgenticCommerce 주소>
-export PRIVATE_KEY=<배포자 지갑>
-
-npm run deploy -- --network baseSepolia
-```
-
-**배포 순서:**
+## Deployment
 
 ```mermaid
 flowchart TD
-    A["1. BondPool.deploy(USDC, admin, reserveRatio=2000)"]
-    B["2. PremiumCalculator.deploy(reputationOracle)"]
-    C["3. EvaluatorStaking.deploy(USDC, admin)"]
-    D["4. PerformanceBondHook.deploy(ACP, pool, calc, USDC, staking)"]
+    A["1. Deploy BondPool(USDC, admin, reserveRatio=2000)"]
+    B["2. Deploy PremiumCalculator(reputationOracle)"]
+    C["3. Deploy EvaluatorStaking(USDC, admin)"]
+    D["4. Deploy PerformanceBondHook(ACP, pool, calc, USDC, staking)"]
     E["5. BondPool.setHook(hook)"]
     F["6. EvaluatorStaking.transferOwnership(hook)"]
     G["7. ACP Admin: setHookWhitelist(hook, true)"]
@@ -216,46 +206,50 @@ flowchart TD
     A --> B --> C --> D --> E --> F --> G --> H
 ```
 
+```bash
+export ACP_ADDRESS=<ERC-8183 AgenticCommerce address>
+export PRIVATE_KEY=<deployer wallet>
+
+npm run deploy -- --network baseSepolia
+```
+
 ---
 
-## Provider 통합 예시
+## Provider Integration
 
 ```javascript
-// 1. 프리미엄 사전 approve
+// 1. Approve premium before setBudget
 const premium = await calculator.getPremium(budget, providerAddr, durationDays, 2)
-await usdc.approve(hookAddress, premium * 110n / 100n)  // 10% 여유
+await usdc.approve(hookAddress, premium * 110n / 100n)
 
-// 2. Client가 잡 생성 (hook 주소 지정)
-await acp.createJob(provider, evaluator, expiredAt, "작업 설명", hookAddress)
+// 2. Client creates job with hook address
+await acp.createJob(provider, evaluator, expiredAt, "Task description", hookAddress)
 
-// 3. Provider가 예산 설정 + Tier 선택
-const optParams = ethers.AbiCoder.defaultAbiCoder().encode(["uint8"], [2])  // Standard
+// 3. Provider sets budget + selects tier
+// tier: 1=Basic, 2=Standard, 3=Premium
+const optParams = ethers.AbiCoder.defaultAbiCoder().encode(["uint8"], [2])
 await acp.connect(provider).setBudget(jobId, budget, optParams)
-// → beforeAction에서 프리미엄 자동 징수, Bond 발행
+// → Hook collects premium automatically in beforeAction
 
-// 4. Client 자금 공급
+// 4. Client funds the job
 await usdc.approve(acpAddress, budget)
 await acp.connect(client).fund(jobId, "0x")
 ```
 
 ---
 
-## 미구현 / 확장 방향
+## Roadmap
 
-| 기능 | 설명 |
-|------|------|
-| ReputationOracle | 온체인 `JobCompleted/Rejected` 이벤트 집계 → provider 완료율 자동 갱신 |
-| LP 풀 모델 | 유동성 공급자가 자본 예치 → 프리미엄 수익 분배 (DeFi yield 결합) |
-| 챌린지 중재 | Kleros / 멀티시그 관리자 → 분쟁 해결 |
-| 티어별 SBT | 보험 가입 이력을 Soulbound Token으로 발행 |
-| 크로스체인 | 단일 풀, 다중 ACP 인스턴스 지원 |
-
----
-
-## 라이선스
-
-MIT
+| Feature | Description |
+|---------|-------------|
+| On-chain ReputationOracle | Index `JobCompleted` / `JobRejected` events → auto-update provider completion rate |
+| LP Pool | Liquidity providers deposit capital → earn premium yield |
+| Kleros Integration | Decentralized arbitration for challenged claims |
+| Tier SBT | Soulbound token for bond tier history → portable trust signal |
+| Cross-chain | Single insurance pool backing multiple ACP deployments |
 
 ---
 
-*Built with ERC-8183 Reference Implementation · Powered by OpenClaw + Claude Sonnet*
+## License
+
+MIT · Built with ERC-8183 · Powered by [OpenClaw](https://openclaw.ai)
