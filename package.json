@@ -1,0 +1,32 @@
+{
+  "name": "agent-insurance",
+  "version": "1.0.0",
+  "description": "> ERC-8183 \uae30\ubc18 Provider \uc774\ud589\ubcf4\uc99d \ubcf4\ud5d8 \ud504\ub85c\ud1a0\ucf5c",
+  "main": "index.js",
+  "scripts": {
+    "test": "hardhat test --config hardhat.config.cjs",
+    "compile": "hardhat compile --config hardhat.config.cjs",
+    "deploy": "hardhat run scripts/deploy.cjs --config hardhat.config.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxyuns/agent-insurance.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/oxyuns/agent-insurance/issues"
+  },
+  "homepage": "https://github.com/oxyuns/agent-insurance#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.6.1",
+    "@openzeppelin/contracts-upgradeable": "^5.6.1",
+    "@types/node": "^25.5.0",
+    "hardhat": "^2.28.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

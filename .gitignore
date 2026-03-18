@@ -5,3 +5,8 @@ typechain-types/
 .env
 coverage/
 coverage.json
+node_modules/
+artifacts/
+cache/
+typechain-types/
+.env
