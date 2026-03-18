@@ -238,6 +238,50 @@ await acp.connect(client).fund(jobId, "0x")
 
 ---
 
+## x402 Service API
+
+agent-insurance exposes a pay-per-query API using the [x402 HTTP payment standard](https://x402.org). AI agents pay $0.001 USDC per request — no API keys, no accounts.
+
+### Run the server
+
+```bash
+npm run server
+```
+
+### Endpoints
+
+| Endpoint | Price | Description |
+|----------|-------|-------------|
+| `GET /` | Free | Service manifest + contract addresses |
+| `GET /agent.json` | Free | ERC-8004 agent registration file |
+| `GET /quote` | $0.001 | Premium quote for a job |
+| `GET /pool/health` | $0.001 | BondPool solvency metrics |
+| `GET /coverage` | $0.001 | Coverage amount calculator |
+
+### How payment works
+
+```bash
+# 1. Request resource → server returns 402 with payment instructions
+curl http://localhost:4021/quote?budget=1000000&tier=2
+# → HTTP 402 Payment Required
+
+# 2. Agent pays via x402 facilitator (Base Sepolia USDC)
+# 3. Request retried with payment proof → 200 OK + data
+```
+
+### ERC-8004 Identity
+
+Tigu is registered on Base Mainnet via ERC-8004:
+
+```
+agentId:   33398
+registry:  eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432
+operator:  0x6FFa1e00509d8B625c2F061D7dB07893B37199BC
+txHash:    0xf5167b1f2f5341f46c1f585bff65670a7853ab119ee101b5777babdd34edf855
+```
+
+---
+
 ## Roadmap
 
 | Feature | Description |
