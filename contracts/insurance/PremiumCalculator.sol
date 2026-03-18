@@ -11,8 +11,9 @@ interface IReputationOracle {
 contract PremiumCalculator is IPremiumCalculator {
     IReputationOracle public immutable oracle;
 
-    // Tier별 커버리지 비율 (bp): None=0, Basic=30%, Standard=60%, Premium=80%
-    uint256[4] public coverageRatios = [0, 3000, 6000, 8000];
+    // Tier별 커버리지 비율 (bp): None=0, Basic=30%, Standard=60%, Premium=100%
+    // 실제 지급 상한 80%는 PerformanceBondHook의 MAX_COVERAGE_BPS로 별도 적용
+    uint256[4] public coverageRatios = [0, 3000, 6000, 10000];
 
     // 신규 provider 기본 완료율 (70%)
     uint256 public constant DEFAULT_COMPLETION_RATE = 7000;

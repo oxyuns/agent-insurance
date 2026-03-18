@@ -270,11 +270,14 @@ describe("PerformanceBondHook — Integration Tests", function () {
       expect(await calculator.getCoverage(BUDGET, 0)).to.equal(0);
     });
 
-    it("tier=3 (Premium) gives highest coverage (80% cap)", async () => {
+    it("tier=3 (Premium) gives 100% coverage from calculator (80% cap applied in Hook)", async () => {
+      // Calculator는 설계대로 Tier3=100% 반환
       const coverage = await calculator.getCoverage(BUDGET, 3);
+      expect(coverage).to.equal(BUDGET); // 100%
+
+      // Hook에서 실제 policy에는 80% 상한 적용됨
       const maxCov = BUDGET * 8000n / 10000n;
-      // PremiumCalculator의 coverageRatios[3]=8000 이므로 = maxCov
-      expect(coverage).to.equal(maxCov);
+      expect(maxCov).to.equal(BUDGET * 8000n / 10000n);
     });
 
     it("premium increases with higher tier", async () => {

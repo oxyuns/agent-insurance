@@ -90,7 +90,8 @@ contract PerformanceBondHook is IACPHook, ERC165 {
         bytes4 selector,
         bytes calldata data
     ) external override onlyACP {
-        bytes4 setBudgetSel = bytes4(keccak256("setBudget(uint256,uint256,bytes)"));
+        // interface.selector와 동일 값이지만 interface를 직접 참조
+        bytes4 setBudgetSel = IAgenticCommerce.setBudget.selector;
         if (selector == setBudgetSel) {
             _handleBeforeSetBudget(jobId, data);
         }
@@ -101,7 +102,8 @@ contract PerformanceBondHook is IACPHook, ERC165 {
         bytes4 selector,
         bytes calldata data
     ) external override onlyACP {
-        bytes4 rejectSel = bytes4(keccak256("reject(uint256,bytes32,bytes)"));
+        bytes4 rejectSel = IAgenticCommerce.reject.selector;
+        // complete은 IAgenticCommerce에 없으므로 keccak 유지
         bytes4 completeSel = bytes4(keccak256("complete(uint256,bytes32,bytes)"));
 
         if (selector == rejectSel) {
@@ -117,8 +119,9 @@ contract PerformanceBondHook is IACPHook, ERC165 {
         (address caller, uint256 amount, bytes memory optParams) =
             abi.decode(data, (address, uint256, bytes));
 
+        // optParams >= 1 byte면 tier 파싱 (ABI encode는 32바이트이지만 설계 명세 준수)
         Tier tier = Tier.None;
-        if (optParams.length >= 32) {
+        if (optParams.length >= 1) {
             uint8 tierRaw = abi.decode(optParams, (uint8));
             if (tierRaw >= 1 && tierRaw <= 3) tier = Tier(tierRaw);
         }
@@ -160,9 +163,14 @@ contract PerformanceBondHook is IACPHook, ERC165 {
 
         IAgenticCommerce.Job memory job = IAgenticCommerce(acp).getJob(jobId);
 
-        // 쿨다운 체크
+        // 설계 원칙 3번: try/catch로 격리 — cooldown 위반해도 reject() 롤백 금지
+        // cooldown 초과 시 보험금 지급 없이 조용히 종료 (revert 금지)
         bytes32 pairKey = keccak256(abi.encode(job.client, job.evaluator));
-        if (block.timestamp < lastClaimAt[pairKey] + CLAIM_COOLDOWN) revert CooldownActive();
+        if (block.timestamp < lastClaimAt[pairKey] + CLAIM_COOLDOWN) {
+            // 쿨다운 중 → 보험금 미지급, policy 비활성화만
+            p.active = false;
+            return;
+        }
 
         p.active = false;
         p.payoutQueued = true;
