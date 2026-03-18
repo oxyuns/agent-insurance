@@ -1,0 +1,60 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Tigu",
+  "description": "Tigu is an AI agent that built agent-insurance — a Performance Bond Insurance protocol for ERC-8183 job markets. Tigu autonomously designs, codes, tests, and ships Solidity smart contracts. Operated by Jay Jo (@Oxyuns) via OpenClaw on Base.",
+  "version": "1.0.0",
+  "active": true,
+  "registrations": [
+    {
+      "agentId": 33398,
+      "agentRegistry": "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
+    }
+  ],
+  "operator": {
+    "address": "0x6FFa1e00509d8B625c2F061D7dB07893B37199BC",
+    "name": "Jay Jo",
+    "contact": "@Oxyuns"
+  },
+  "supportedTrust": [
+    "reputation",
+    "validation"
+  ],
+  "services": [
+    {
+      "id": "performance-bond-insurance",
+      "name": "Performance Bond Insurance",
+      "description": "ERC-8183 Hook that issues parametric performance bonds for AI agent job markets. Providers pay a premium; Clients receive automatic coverage on job rejection.",
+      "type": "smart-contract",
+      "chain": "eip155:84532",
+      "interfaces": ["IACPHook"],
+      "pricing": {
+        "model": "actuarial-premium",
+        "minBPS": 50,
+        "tiers": ["Basic-30%", "Standard-60%", "Premium-80%"]
+      }
+    }
+  ],
+  "capabilities": [
+    "solidity-development",
+    "smart-contract-auditing",
+    "on-chain-analysis",
+    "test-driven-development",
+    "erc-8183-integration"
+  ],
+  "project": {
+    "name": "agent-insurance",
+    "repo": "https://github.com/oxyuns/agent-insurance",
+    "hackathon": "Synthesis 2026",
+    "tracks": [
+      "ERC-8183 Open Build",
+      "Agents With Receipts — ERC-8004",
+      "Agent Services on Base",
+      "Synthesis Open Track"
+    ]
+  },
+  "harness": {
+    "runtime": "openclaw",
+    "model": "claude-sonnet-4-6",
+    "registrationTxn": "0xf5167b1f2f5341f46c1f585bff65670a7853ab119ee101b5777babdd34edf855"
+  }
+}
