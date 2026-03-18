@@ -126,7 +126,7 @@ export default function Home() {
 
         <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
           Bad work gets rejected.<br />
-          <span className="text-blue-400">Client gets paid.</span><br />
+          <span className="text-blue-400">Client gets paid more.</span><br />
           Automatically.
         </h1>
 
