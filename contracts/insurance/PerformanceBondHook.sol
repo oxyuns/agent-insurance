@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "../IACPHook.sol";
 import "./interfaces/IBondPool.sol";
 import "./interfaces/IPremiumCalculator.sol";
+import "./EvaluatorStaking.sol";
 
 interface IAgenticCommerce {
     struct Job {
@@ -35,6 +36,7 @@ contract PerformanceBondHook is IACPHook, ERC165 {
     IBondPool public immutable pool;
     IPremiumCalculator public immutable calculator;
     IERC20 public immutable token;
+    EvaluatorStaking public immutable evaluatorStaking; // optional (address(0) = disabled)
 
     enum Tier { None, Basic, Standard, Premium }
 
@@ -76,11 +78,18 @@ contract PerformanceBondHook is IACPHook, ERC165 {
         _;
     }
 
-    constructor(address acp_, address pool_, address calculator_, address token_) {
+    constructor(
+        address acp_,
+        address pool_,
+        address calculator_,
+        address token_,
+        address evaluatorStaking_ // address(0) = Level1 only
+    ) {
         acp = acp_;
         pool = IBondPool(pool_);
         calculator = IPremiumCalculator(calculator_);
         token = IERC20(token_);
+        evaluatorStaking = EvaluatorStaking(evaluatorStaking_);
     }
 
     // ─── IACPHook ────────────────────────────────────────────
@@ -184,6 +193,11 @@ contract PerformanceBondHook is IACPHook, ERC165 {
         });
 
         emit ClaimQueued(jobId, job.client, p.coverageAmt, p.challengeExpiry);
+
+        // Level2: EvaluatorStaking에 reject 기록 (이상 패턴 감지)
+        if (address(evaluatorStaking) != address(0)) {
+            try evaluatorStaking.recordJob(job.evaluator, true) {} catch {}
+        }
     }
 
     function _handleAfterComplete(uint256 jobId) internal {
@@ -191,6 +205,13 @@ contract PerformanceBondHook is IACPHook, ERC165 {
         if (!p.active) return;
 
         p.active = false;
+
+        // Level2: EvaluatorStaking에 complete 기록
+        if (address(evaluatorStaking) != address(0)) {
+            IAgenticCommerce.Job memory job = IAgenticCommerce(acp).getJob(jobId);
+            try evaluatorStaking.recordJob(job.evaluator, false) {} catch {}
+        }
+
         emit BondReleased(jobId);
     }
 

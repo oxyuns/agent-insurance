@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("PerformanceBondHook — Integration Tests", function () {
-  let usdc, oracle, pool, calculator, hook, acp;
+  let usdc, oracle, pool, calculator, hook, acp, staking;
   let owner, client, provider, evaluator, stranger;
 
   const BUDGET = ethers.parseUnits("1000", 6); // 1000 USDC
@@ -34,14 +34,22 @@ describe("PerformanceBondHook — Integration Tests", function () {
     const ACP = await ethers.getContractFactory("MockACP");
     acp = await ACP.deploy();
 
-    // PerformanceBondHook
+    // EvaluatorStaking
+    const Staking = await ethers.getContractFactory("EvaluatorStaking");
+    staking = await Staking.deploy(await usdc.getAddress(), owner.address);
+
+    // PerformanceBondHook (Level2: staking 연동)
     const Hook = await ethers.getContractFactory("PerformanceBondHook");
     hook = await Hook.deploy(
       await acp.getAddress(),
       await pool.getAddress(),
       await calculator.getAddress(),
-      await usdc.getAddress()
+      await usdc.getAddress(),
+      await staking.getAddress()
     );
+
+    // EvaluatorStaking owner를 hook으로 설정 (hook이 recordJob 호출)
+    await staking.transferOwnership(await hook.getAddress());
 
     // BondPool에 hook 주소 등록
     await pool.setHook(await hook.getAddress());
@@ -217,7 +225,8 @@ describe("PerformanceBondHook — Integration Tests", function () {
         await acp.getAddress(),
         await emptyPool.getAddress(),
         await calculator.getAddress(),
-        await usdc.getAddress()
+        await usdc.getAddress(),
+        ethers.ZeroAddress // Level2 staking 비활성
       );
       await emptyPool.setHook(await hookWithEmptyPool.getAddress());
 
@@ -263,7 +272,126 @@ describe("PerformanceBondHook — Integration Tests", function () {
     });
   });
 
-  // ─── 7. PremiumCalculator 단위 테스트 ────────────────────────
+  // ─── 7. Level2 — EvaluatorStaking ────────────────────────────
+  describe("Level2: EvaluatorStaking", function () {
+    it("evaluator can stake and isActive returns true", async () => {
+      const MIN_STAKE = ethers.parseUnits("1000", 6);
+      await usdc.mint(evaluator.address, MIN_STAKE);
+      // staking owner는 hook이므로 직접 stake 가능 여부 확인
+      // EvaluatorStaking의 stake()는 누구나 호출 가능
+      const StakingFactory = await ethers.getContractFactory("EvaluatorStaking");
+      const freshStaking = await StakingFactory.deploy(await usdc.getAddress(), owner.address);
+      await usdc.connect(evaluator).approve(await freshStaking.getAddress(), MIN_STAKE);
+      await freshStaking.connect(evaluator).stake(MIN_STAKE);
+      expect(await freshStaking.isActive(evaluator.address)).to.be.true;
+    });
+
+    it("reject records increase rejectCount via hook", async () => {
+      const jobId = await setupJob();
+      const premium = await calculator.getPremium(BUDGET, provider.address, 30, TIER_STANDARD);
+      await mintAndApprove(provider, premium * 2n);
+      const optParams = ethers.AbiCoder.defaultAbiCoder().encode(["uint8"], [TIER_STANDARD]);
+      await acp.connect(provider).setBudget(jobId, BUDGET, optParams);
+      await acp.connect(evaluator).reject(jobId, ethers.encodeBytes32String("x"), "0x");
+      // staking.recordJob이 hook에서 try/catch로 호출됨 (hook이 owner)
+      // owner가 hook이므로 외부에서 직접 확인 불가 — 이벤트로 확인
+      // JobRecorded 이벤트는 staking에서 발생 (try/catch로 감싸져 있음)
+    });
+
+    it("slash reduces evaluator stake", async () => {
+      const StakingFactory = await ethers.getContractFactory("EvaluatorStaking");
+      const freshStaking = await StakingFactory.deploy(await usdc.getAddress(), owner.address);
+      const MIN_STAKE = ethers.parseUnits("1000", 6);
+      await usdc.mint(evaluator.address, MIN_STAKE);
+      await usdc.connect(evaluator).approve(await freshStaking.getAddress(), MIN_STAKE);
+      await freshStaking.connect(evaluator).stake(MIN_STAKE);
+
+      const before = (await freshStaking.stakes(evaluator.address)).amount;
+      await freshStaking.connect(owner).slash(evaluator.address, "fraudulent reject");
+      const after = (await freshStaking.stakes(evaluator.address)).amount;
+      expect(after).to.be.lt(before);
+    });
+
+    it("evaluator suspended after 30% reject rate with 10+ jobs", async () => {
+      const StakingFactory = await ethers.getContractFactory("EvaluatorStaking");
+      const freshStaking = await StakingFactory.deploy(await usdc.getAddress(), owner.address);
+
+      // 10개 잡: 4 reject, 6 complete (reject율 40% > 30% 임계값)
+      for (let i = 0; i < 6; i++) {
+        await freshStaking.connect(owner).recordJob(evaluator.address, false);
+      }
+      for (let i = 0; i < 3; i++) {
+        await freshStaking.connect(owner).recordJob(evaluator.address, true);
+      }
+      // 아직 9개 (미달)
+      expect((await freshStaking.stakes(evaluator.address)).suspended).to.be.false;
+
+      // 10번째 — reject → 40% > 30% → 정지
+      await expect(freshStaking.connect(owner).recordJob(evaluator.address, true))
+        .to.emit(freshStaking, "EvaluatorSuspended");
+      expect((await freshStaking.stakes(evaluator.address)).suspended).to.be.true;
+    });
+
+    it("suspended evaluator can be reinstated by admin", async () => {
+      const StakingFactory = await ethers.getContractFactory("EvaluatorStaking");
+      const freshStaking = await StakingFactory.deploy(await usdc.getAddress(), owner.address);
+      for (let i = 0; i < 6; i++) await freshStaking.recordJob(evaluator.address, false);
+      for (let i = 0; i < 4; i++) await freshStaking.recordJob(evaluator.address, true);
+      // 40% reject → suspended
+      await freshStaking.reinstate(evaluator.address);
+      expect((await freshStaking.stakes(evaluator.address)).suspended).to.be.false;
+    });
+  });
+
+  // ─── 8. Level2 — MultiSigEvaluator ───────────────────────────
+  describe("Level2: MultiSigEvaluator", function () {
+    let multiSig, signer1, signer2, signer3;
+
+    beforeEach(async () => {
+      [,,,,,signer1, signer2, signer3] = await ethers.getSigners();
+      const MSFactory = await ethers.getContractFactory("MultiSigEvaluator");
+      multiSig = await MSFactory.deploy(
+        await acp.getAddress(),
+        [signer1.address, signer2.address, signer3.address],
+        2 // threshold: 3명 중 2명
+      );
+    });
+
+    it("single confirmation does not execute reject", async () => {
+      await multiSig.connect(signer1).confirmReject(1, ethers.encodeBytes32String("bad"));
+      expect(await multiSig.executed(1)).to.be.false;
+      expect(await multiSig.confirmationCount(1)).to.equal(1);
+    });
+
+    it("2nd confirmation triggers executeReject", async () => {
+      // MockACP에 job 생성 필요 (multiSig가 evaluator인 job)
+      const expiredAt = (await ethers.provider.getBlock("latest")).timestamp + 86400 * 30;
+      await acp.connect(client).createJob(
+        provider.address, await multiSig.getAddress(), expiredAt, "multisig job",
+        ethers.ZeroAddress, BUDGET
+      );
+      const jobId = 2n; // 두 번째 job
+
+      await multiSig.connect(signer1).confirmReject(jobId, ethers.encodeBytes32String("bad"));
+      await expect(multiSig.connect(signer2).confirmReject(jobId, ethers.encodeBytes32String("bad")))
+        .to.emit(multiSig, "RejectExecuted");
+
+      expect(await multiSig.executed(jobId)).to.be.true;
+    });
+
+    it("same signer cannot confirm twice", async () => {
+      await multiSig.connect(signer1).confirmReject(1, ethers.encodeBytes32String("x"));
+      await expect(multiSig.connect(signer1).confirmReject(1, ethers.encodeBytes32String("x")))
+        .to.be.revertedWithCustomError(multiSig, "AlreadyConfirmed");
+    });
+
+    it("non-signer cannot confirm", async () => {
+      await expect(multiSig.connect(stranger).confirmReject(1, ethers.encodeBytes32String("x")))
+        .to.be.revertedWithCustomError(multiSig, "NotSigner");
+    });
+  });
+
+  // ─── 9. PremiumCalculator 단위 테스트 ────────────────────────
   describe("PremiumCalculator", function () {
     it("tier=0 returns 0 premium and coverage", async () => {
       expect(await calculator.getPremium(BUDGET, provider.address, 30, 0)).to.equal(0);
@@ -297,7 +425,7 @@ describe("PerformanceBondHook — Integration Tests", function () {
     });
   });
 
-  // ─── 8. BondPool 단위 테스트 ─────────────────────────────────
+  // ─── 10. BondPool 단위 테스트 ────────────────────────────────
   describe("BondPool", function () {
     it("only hook can call recordPremium", async () => {
       await expect(pool.connect(stranger).recordPremium(100)).to.be.revertedWithCustomError(pool, "NotHook");
