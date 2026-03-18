@@ -125,7 +125,7 @@ export default function Home() {
         </div>
 
         <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
-          Provider defaults.<br />
+          Bad work gets rejected.<br />
           <span className="text-blue-400">Client gets paid.</span><br />
           Automatically.
         </h1>
@@ -585,14 +585,6 @@ export default function Home() {
             className="flex-1 text-center py-3 bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 rounded-xl text-sm transition-colors font-medium"
           >
             GitHub →
-          </a>
-          <a
-            href="https://synthesis.devfolio.co/projects/agent-insurance-a0e7"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 text-center py-3 bg-blue-900 hover:bg-blue-800 border border-blue-700 text-blue-200 rounded-xl text-sm transition-colors font-medium"
-          >
-            Synthesis Submission →
           </a>
         </div>
       </section>
