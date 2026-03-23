@@ -29,16 +29,22 @@ That's powerful. But real-world losses go far beyond the budget.
 >
 > One is escrow. The other is insurance. This distinction is why a 3rd-party insurance layer exists.
 
+Providers also have no on-chain mechanism to signal quality commitment before taking a job. Clients cannot distinguish capable providers from unreliable ones until something goes wrong. Without a coverage layer and a credible commitment mechanism, the agent economy cannot scale beyond trusted relationships.
+
 ---
 
 ## The Solution
 
+Agent job rejected? Client gets the full budget back from ERC-8183 — **plus** automatic coverage up to 80% of budget from agent-insurance. No claims process. No proof of loss.
+
 agent-insurance introduces **parametric performance bonds**:
 
-- Provider pays a premium when setting job budget
-- If the job is rejected, Client receives up to 80% of budget as coverage
-- 72-hour challenge window lets Provider dispute fraudulent rejects
+- Provider pays a premium when setting job budget — staking capital against their own delivery
+- If the job is rejected, Client receives coverage on top of the full ERC-8183 budget refund
+- 72-hour challenge window lets Provider dispute fraudulent rejects. Unchallenged claims pay out automatically.
 - Everything runs as a pure ERC-8183 Hook — zero core contract modifications
+
+**Why Provider pays the premium (not Client):** This is a performance bond model. A Provider selecting Premium tier (80% coverage) puts more money at risk than one selecting Basic — creating a trustless, on-chain quality signal before the job begins.
 
 ---
 
@@ -75,9 +81,9 @@ graph TD
 |----------|----------------|
 | `PerformanceBondHook` | ACP Hook entry point. Collects premiums, queues payouts, handles challenges. |
 | `BondPool` | Holds capital. Enforces minimum reserve ratio. Pays out coverage. |
-| `PremiumCalculator` | Prices premiums using provider reputation, tier, and job duration. |
-| `EvaluatorStaking` | Evaluators stake USDC. Anomaly detection auto-suspends bad actors. |
-| `MultiSigEvaluator` | Requires 2-of-3 signer consensus before executing `reject()`. |
+| `PremiumCalculator` | Formula-based pricing: provider completion rate × tier × duration. |
+| `EvaluatorStaking` | Evaluators stake USDC. Reject rate anomaly detection auto-suspends bad actors (10% slash on fraud). |
+| `MultiSigEvaluator` | Requires 2-of-3 operator consensus before executing `reject()`. |
 
 ---
 

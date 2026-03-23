@@ -31,12 +31,12 @@ Traditional insurance has the client pay. This protocol flips it — and that's 
 | Trust signal | None | Paying premium = public signal of confidence |
 | Market effect | Price competition only | Quality competition incentivized |
 
-> **Paying a premium is how a provider says "I'm confident in my work" on-chain.**
-> A provider who selects Premium tier (80% coverage) is putting more money on the line — and clients can see that.
+> **This is a performance bond. The Provider stakes capital against their own delivery.**
+> A Provider selecting Premium tier (80% coverage) puts more money at risk than one selecting Basic — creating a trustless, on-chain quality signal before the job begins.
 
 ## What This System Does
 
-agent-insurance is a **parametric performance bond insurance protocol** built as a pure ERC-8183 Hook. It adds an insurance layer on top of ERC-8183 job markets — covering losses beyond the budget refund that ACP core provides.
+Agent job rejected? Client gets the full budget back from ERC-8183 — plus automatic coverage up to 80% of budget from agent-insurance. No claims process. No proof of loss.
 
 **One-line summary:** Bad work gets rejected. Client gets paid more. Automatically.
 
@@ -48,7 +48,7 @@ Three design decisions that matter:
 
 2. **Parametric trigger — no proof of loss required.** The `reject()` call itself is the insurance trigger. No claims process, no documentation, no off-chain arbitration for standard cases. Coverage is automatic.
 
-3. **72-hour challenge window — fraud protection without blocking payouts.** Providers can dispute fraudulent rejects. But honest claims pay out after 72 hours with no gatekeeping.
+3. **72-hour challenge window — fraud protection without blocking payouts.** Providers can dispute fraudulent rejects. Unchallenged claims pay out automatically after 72h.
 
 ## Agent Identity
 
@@ -131,7 +131,7 @@ EvaluatorStaking
 
 - **Parametric trigger**: `reject()` call itself is the trigger. No proof of loss required.
 - **Pure Hook**: Zero modifications to ERC-8183 core contract.
-- **Provider pays premium**: Skin-in-the-game signal of commitment quality.
+- **Provider pays premium**: Performance bond model — provider stakes capital against their own delivery.
 - **80% coverage cap**: Client absorbs 20% loss — prevents pure arbitrage attacks.
 - **claimRefund has no hook**: By ERC-8183 design — prevents hook from blocking emergency refunds.
 
@@ -169,9 +169,9 @@ Scenarios covered:
 |------|-------------|
 | `contracts/insurance/PerformanceBondHook.sol` | Core Hook implementation |
 | `contracts/insurance/BondPool.sol` | Capital pool |
-| `contracts/insurance/PremiumCalculator.sol` | Actuarial pricing |
-| `contracts/insurance/EvaluatorStaking.sol` | Level 2 staking |
-| `contracts/insurance/MultiSigEvaluator.sol` | Level 2 multisig |
+| `contracts/insurance/PremiumCalculator.sol` | Formula-based pricing (completion rate × tier × duration) |
+| `contracts/insurance/EvaluatorStaking.sol` | Level 2 staking + anomaly detection |
+| `contracts/insurance/MultiSigEvaluator.sol` | Level 2 multisig (2-of-3 operator consensus) |
 | `agent.json` | ERC-8004 agent manifest |
 | `agent_log.json` | Build decisions + milestones |
 | `demo/` | Next.js dashboard with live on-chain data |
